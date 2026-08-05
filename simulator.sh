@@ -2,13 +2,17 @@
 
 ###############################################################################
 # ChartIQ Simulator Bootstrap Script
-# Purpose: Install and Configure ChartIQ Simulator Application
+# Purpose : Install and Configure ChartIQ Simulator
+# Platform: Amazon Linux 2023
 ###############################################################################
 
 set -e
 set -x
 
-# Log everything
+###############################################################################
+# Logging
+###############################################################################
+
 exec > >(tee -a /var/log/simulator-bootstrap.log | logger -t simulator-bootstrap -s 2>/dev/console) 2>&1
 
 echo "==================================================================="
@@ -18,33 +22,63 @@ echo "Date     : $(date)"
 echo "==================================================================="
 
 ###############################################################################
-# Install Node.js
+# Update Operating System
 ###############################################################################
 
-echo "Installing Node.js..."
+echo "Updating Operating System..."
 
-dnf install -y nodejs awscli
+dnf update -y
 
-echo "Node Version"
-node -v
+###############################################################################
+# Install Required System Packages
+###############################################################################
 
-echo "NPM Version"
-npm -v
+echo "Installing Required System Packages..."
+
+dnf install -y awscli jq curl
+
+###############################################################################
+# Validate Amazon SSM Agent & install
+###############################################################################
+
+echo
+echo "Validating Amazon SSM Agent..."
+
+if rpm -q amazon-ssm-agent >/dev/null 2>&1
+then
+
+    echo "Amazon SSM Agent already installed."
+
+else
+
+    echo "Installing Amazon SSM Agent..."
+
+    dnf install -y amazon-ssm-agent
+
+fi
 
 ###############################################################################
 # Enable Amazon SSM Agent
 ###############################################################################
 
+echo
+
 echo "Enabling Amazon SSM Agent..."
 
 systemctl enable amazon-ssm-agent
-systemctl start amazon-ssm-agent
+systemctl restart amazon-ssm-agent
+
+sleep 5
+
+echo "Amazon SSM Agent Status"
+systemctl status amazon-ssm-agent --no-pager
 
 ###############################################################################
 # Create Temporary Directory
 ###############################################################################
 
-echo "Creating temporary directory..."
+echo
+echo "Creating Temporary Directory..."
 
 mkdir -p /temp/assets/application
 
@@ -52,134 +86,234 @@ mkdir -p /temp/assets/application
 # Download Artifacts from S3
 ###############################################################################
 
-echo "Downloading artifacts from S3..."
+echo
+echo "Downloading Simulator Artifacts..."
 
-saws s3 ls s3://siva-app-artifacts/quotesim/prod/application/ 
+aws s3 ls s3://siva-app-artifacts/simulator/prod/
 
-aws s3 sync s3://siva-app-artifacts/quotesim/prod/application/ /temp/assets/application
+aws s3 sync s3://siva-app-artifacts/simulator/prod/application/ /temp/assets/application/
 
-aws s3 cp s3://siva-app-artifacts/quotesim/prod/quotesim.service /temp/assets/quotesim.service
+aws s3 cp s3://siva-app-artifacts/simulator/prod/simulator.service /temp/assets/simulator.service
 
-
+echo
 echo "Downloaded Files"
-
 ls -R /temp/assets
-
-###############################################################################
-# Verify Download
-###############################################################################
-
-if [ ! -f /temp/assets/application/package.json ]; then
-    echo "ERROR : package.json not found."
-    exit 1
-fi
-
-if [ ! -f /temp/assets/application/DataFeed.js ]; then
-    echo "ERROR : DataFeed.js not found."
-    exit 1
-fi
-
-if [ ! -f /temp/assets/simulator.service ]; then
-    echo "ERROR : simulator.service not found."
-    exit 1
-fi
-
-###############################################################################
-# Install systemd Service
-###############################################################################
-
-echo "Installing simulator.service..."
-
-mv /temp/assets/quotesim.service /etc/systemd/system/simulator.service
 
 ###############################################################################
 # Create Application Directory
 ###############################################################################
 
+echo
 echo "Creating Application Directory..."
 
-mkdir -p /opt/simulator
+mkdir -p /opt/chartiq
 
 ###############################################################################
 # Copy Application
 ###############################################################################
 
+echo
 echo "Copying Application..."
 
-cp -a /temp/assets/application/* /opt/simulator/
+cp -a /temp/assets/application/* /opt/chartiq/
+
+echo
+
+echo "Application Directory"
+
+ls -lah /opt/chartiq
+
 
 ###############################################################################
-# Install Node Modules
+# Determine Required Node.js Version
 ###############################################################################
 
-echo "Installing Node.js Dependencies..."
+echo
+echo "Reading Node.js Engine from package.json..."
 
-cd /opt/simulator
+PACKAGE_JSON="/opt/chartiq/package.json"
 
-if [ -f package-lock.json ]; then
-    npm ci
-else
-    npm install
+if [ ! -f "${PACKAGE_JSON}" ]
+then
+    echo "ERROR : package.json not found."
+    exit 1
 fi
+
+NODE_ENGINE=$(jq -r '.engines.node' "${PACKAGE_JSON}")
+
+echo "Application Node.js Engine : ${NODE_ENGINE}"
+
+###############################################################################
+# Select Node.js Version
+###############################################################################
+
+case "${NODE_ENGINE}" in
+    *24*)
+        NODE_VERSION="24"
+        ;;
+    *22*)
+        NODE_VERSION="22"
+        ;;
+    *)
+        echo "ERROR : Unsupported Node.js Engine : ${NODE_ENGINE}"
+        exit 1
+        ;;
+esac
+
+echo "Selected Node.js LTS Version : ${NODE_VERSION}"
+
+###############################################################################
+# Install Node.js LTS
+###############################################################################
+
+echo
+echo "Installing Node.js ${NODE_VERSION} LTS..."
+
+curl -fsSL https://rpm.nodesource.com/setup_${NODE_VERSION}.x | bash -
+
+dnf install -y nodejs
+
+NODEJS=$(node -v)
+
+echo "Installed Node.js Version : ${NODEJS}"
+
+###############################################################################
+# Validate npm Installation
+###############################################################################
+
+echo
+echo "Validating npm Installation..."
+
+if ! command -v npm >/dev/null 2>&1
+then
+    echo "ERROR : npm is not installed."
+    exit 1
+fi
+
+echo "Installed npm Version : $(npm -v)"
 
 ###############################################################################
 # Set Permissions
 ###############################################################################
 
-echo "Setting Permissions..."
+echo
+echo "Setting Application Permissions..."
 
-chown -R ec2-user:ec2-user /opt/simulator
+chown -R ec2-user:ec2-user /opt/chartiq
 
-chmod -R 755 /opt/simulator
+chmod -R 755 /opt/chartiq
+
+###############################################################################
+# Install Node.js Dependencies
+###############################################################################
+
+echo
+echo "Installing Node.js Dependencies..."
+
+cd /opt/chartiq
+
+if [ -f package-lock.json ]
+then
+    echo "package-lock.json found."
+    echo "Running npm ci..."
+
+    npm ci
+
+else
+
+    echo "package-lock.json not found."
+    echo "Running npm install..."
+
+    npm install
+
+fi
+
+echo
+echo "Node.js Dependencies Installed Successfully."
+
+echo
+echo "Installed Runtime Versions"
+
+echo "--------------------------"
+
+node -v
+
+npm -v
+
+
+###############################################################################
+# Install simulator.service
+###############################################################################
+
+echo
+echo "Installing simulator.service..."
+
+mv /temp/assets/simulator.service /etc/systemd/system/simulator.service
 
 ###############################################################################
 # Reload systemd
 ###############################################################################
 
+echo
 echo "Reloading systemd..."
 
 systemctl daemon-reload
 
 ###############################################################################
-# Enable Service
+# Enable Simulator Service
 ###############################################################################
 
+echo
 echo "Enabling Simulator Service..."
 
 systemctl enable simulator
 
 ###############################################################################
-# Start Service
+# Start Simulator Service
 ###############################################################################
 
+echo
 echo "Starting Simulator Service..."
 
-systemctl start simulator
+systemctl restart simulator
 
-sleep 5
+sleep 10
 
 ###############################################################################
-# Verify Service
+# Verify Simulator Service
 ###############################################################################
 
-if systemctl is-active --quiet simulator
-then
-    echo "Simulator Service Started Successfully."
-else
-    echo "ERROR : Simulator Service Failed."
+echo
+echo "Simulator Service Status"
 
-    journalctl -u simulator --no-pager -n 100
-
-    exit 1
-fi
+systemctl status simulator --no-pager
 
 ###############################################################################
 # Verify Listening Port
 ###############################################################################
 
+echo
 echo "Checking Listening Port..."
 
-ss -tulpn | grep 9876 || true
+ss -lntp | grep 9876 || {
+
+    echo "ERROR : Simulator is not listening on port 9876"
+
+    exit 1
+
+}
+
+echo
+echo "Simulator is listening on port 9876."
+
+###############################################################################
+# Verify HTTP Response (Optional)
+###############################################################################
+
+echo
+echo "Checking Local Connectivity..."
+
+curl -I http://127.0.0.1:9876 || true
 
 ###############################################################################
 # Bootstrap Complete
@@ -191,20 +325,45 @@ echo "ChartIQ Simulator Bootstrap Completed Successfully"
 echo "Completed Time : $(date)"
 echo "==================================================================="
 
+###############################################################################
+# Useful Commands
+###############################################################################
+
 echo
 echo "Useful Commands"
 echo "---------------"
 
+echo "Bootstrap Log"
 echo "tail -f /var/log/simulator-bootstrap.log"
 
+echo
+echo "Cloud-init Output"
 echo "cat /var/log/cloud-init-output.log"
 
+echo
+echo "Simulator Service Status"
 echo "systemctl status simulator"
 
+echo
+echo "Simulator Logs"
 echo "journalctl -u simulator -f"
 
-echo "tail -f /var/log/simulator.log"
+echo
+echo "Listening Port"
+echo "ss -lntp | grep 9876"
 
-echo "ss -tulpn | grep 9876"
+echo
+echo "Running Process"
+echo "ps -ef | grep DataFeed"
 
+echo
+echo "Node Version"
+echo "node -v"
+
+echo
+echo "NPM Version"
+echo "npm -v"
+
+echo
+echo "Cloud-init Status"
 echo "cloud-init status --long"
