@@ -1,8 +1,103 @@
-....
+-------------------------------------------------------------------------------------------------------
+
+* Make Sure  Terraform is installed and in your Windows PATH.
+
+* Install HashiCorp Terraform extension in your Visual Studio Code 
+-------------------------------------------------------------------------------------------------------
+Method 1: Temporary Alias (Current Session Only) On Windows 
+
+To create an alias that only lasts until you close the terminal,
+This method allows you to use "tf plan" or "tf apply" instead of "terraform plan"
+
+
 RUN:
 Set-Alias tf terraform
-
 
 Test the alias:
 
 tf --version
+
+
+-------------------------------------------------------------------------------------------------------
+
+
+Method 2: Using PowerShell Profile (Recommended)
+
+
+1. Open PowerShell and type the following to open your profile in Notepad
+
+RUN:
+
+if (!(Test-Path -Path $PROFILE)) { New-Item -ItemType File -Path $PROFILE -Force }
+notepad $PROFILE
+
+
+
+2. Add the alias function to the notepad file
+
+function tf { terraform $args }
+
+
+3. Save and close Notepad.
+
+4. Reload your profile or restart PowerShell
+
+. $PROFILE
+
+
+5. Test the alias
+
+tf --version
+
+-------------------------------------------------------------
+
+Note:
+When PowerShell starts:
+It automatically runs $PROFILE
+But execution policy = Restricted (default)
+So it blocks your alias function
+
+
+
+To fix any error: like  running scripts is disabled on this system
+
+
+* Open PowerShell run as administrator 
+
+Run this command:
+Set-ExecutionPolicy RemoteSigned   ( effect all user ) 
+type: Y
+
+//or//
+
+Run this for Alternative (You can allow only for your user)
+Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
+type: Y
+
+Then Close and reopen PowerShell (normal mode is fine now)
+
+
+What it does ?
+RemoteSigned =
+Local scripts (like your profile) ✅ allowed
+Downloaded scripts ⚠️ need signature
+👉 This is safe + commonly used by DevOps engineers
+
+-------------------------------------------------------------------------------------------------------
+
+$ pwd
+/c/Users/sivap/.aws
+
+
+Method 3: Using Git Bash
+
+If you use Git Bash, you can add an alias in your .bashrc or .bash_profile file:
+
+vi ~/.bashrc
+
+Add: alias tf='terraform'
+
+
+-------------------------------------------------------------------------------------------------------
+
+
