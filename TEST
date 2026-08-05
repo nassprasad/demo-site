@@ -1,1 +1,8 @@
 ....
+RUN:
+Set-Alias tf terraform
+
+
+Test the alias:
+
+tf --version
