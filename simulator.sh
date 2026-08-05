@@ -89,11 +89,11 @@ mkdir -p /temp/assets/application
 echo
 echo "Downloading Simulator Artifacts..."
 
-aws s3 ls s3://siva-app-artifacts/simulator/prod/
+aws s3 ls s3://siva-app-artifacts/quotesim/prod/
 
-aws s3 sync s3://siva-app-artifacts/simulator/prod/application/ /temp/assets/application/
+aws s3 sync s3://siva-app-artifacts/quotesim/prod/application/ /temp/assets/application/
 
-aws s3 cp s3://siva-app-artifacts/simulator/prod/simulator.service /temp/assets/simulator.service
+aws s3 cp s3://siva-app-artifacts/quotesim/prod/simulator.service /temp/assets/simulator.service
 
 echo
 echo "Downloaded Files"
