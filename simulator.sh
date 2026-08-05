@@ -35,7 +35,7 @@ dnf update -y
 
 echo "Installing Required System Packages..."
 
-dnf install -y awscli jq curl
+dnf install -y awscli jq
 
 ###############################################################################
 # Validate Amazon SSM Agent & install
