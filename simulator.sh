@@ -54,7 +54,7 @@ mkdir -p /temp/assets/application
 
 echo "Downloading artifacts from S3..."
 
-aws s3 ls s3://siva-app-artifacts/quotesim/prod/application/ /temp/assets/application
+aws s3 ls s3://siva-app-artifacts/quotesim/prod/application/ 
 
 aws s3 sync s3://siva-app-artifacts/quotesim/prod/application/ /temp/assets/application
 
