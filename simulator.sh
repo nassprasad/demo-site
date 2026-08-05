@@ -240,6 +240,19 @@ node -v
 
 npm -v
 
+###############################################################################
+# Configure Application to Listen on All Interfaces
+###############################################################################
+
+echo
+echo "Updating DataFeed.js to listen on 0.0.0.0..."
+
+sed -i 's/"127\.0\.0\.1"/"0.0.0.0"/g' /opt/chartiq/DataFeed.js
+
+echo "Verifying Application Listen Address..."
+
+grep -n "app.listen" /opt/chartiq/DataFeed.js
+
 
 ###############################################################################
 # Install simulator.service
