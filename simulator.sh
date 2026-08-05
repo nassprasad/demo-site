@@ -93,7 +93,7 @@ aws s3 ls s3://siva-app-artifacts/quotesim/prod/
 
 aws s3 sync s3://siva-app-artifacts/quotesim/prod/application/ /temp/assets/application/
 
-aws s3 cp s3://siva-app-artifacts/quotesim/prod/simulator.service /temp/assets/simulator.service
+aws s3 cp s3://siva-app-artifacts/quotesim/prod/quotesim.service /temp/assets/quotesim.service
 
 echo
 echo "Downloaded Files"
@@ -248,7 +248,7 @@ npm -v
 echo
 echo "Installing simulator.service..."
 
-mv /temp/assets/simulator.service /etc/systemd/system/simulator.service
+mv /temp/assets/quotesim.service /etc/systemd/system/simulator.service
 
 ###############################################################################
 # Reload systemd
