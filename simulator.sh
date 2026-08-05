@@ -54,11 +54,11 @@ mkdir -p /temp/assets/application
 
 echo "Downloading artifacts from S3..."
 
-aws s3 ls s3://siva-app-artifacts/quotesim/prod/application/ 
+saws s3 ls s3://siva-app-artifacts/quotesim/prod/application/ 
 
 aws s3 sync s3://siva-app-artifacts/quotesim/prod/application/ /temp/assets/application
 
-aws s3 cp s3://siva-app-artifacts/quotesim/prod/quotesim.service.txt /temp/assets/quotesim.service
+aws s3 cp s3://siva-app-artifacts/quotesim/prod/quotesim.service /temp/assets/quotesim.service
 
 
 echo "Downloaded Files"
@@ -90,7 +90,7 @@ fi
 
 echo "Installing simulator.service..."
 
-mv /temp/assets/quotesim.service.txt /etc/systemd/system/simulator.service
+mv /temp/assets/quotesim.service /etc/systemd/system/simulator.service
 
 ###############################################################################
 # Create Application Directory
