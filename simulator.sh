@@ -251,7 +251,7 @@ sed -i 's/"127\.0\.0\.1"/"0.0.0.0"/g' /opt/chartiq/DataFeed.js
 
 echo "Verifying Application Listen Address..."
 
-grep -n "app.listen" /opt/chartiq/DataFeed.js
+grep -n "0.0.0.0" /opt/chartiq/DataFeed.js
 
 
 ###############################################################################
@@ -296,10 +296,16 @@ sleep 10
 # Verify Simulator Service
 ###############################################################################
 
-echo
-echo "Simulator Service Status"
+if systemctl is-active --quiet simulator
+then
+    echo "Simulator Service Started Successfully."
+else
+    echo "ERROR : Simulator Service Failed."
 
-systemctl status simulator --no-pager
+    journalctl -u simulator --no-pager -n 100
+
+    exit 1
+fi
 
 ###############################################################################
 # Verify Listening Port
@@ -326,7 +332,7 @@ echo "Simulator is listening on port 9876."
 echo
 echo "Checking Local Connectivity..."
 
-curl -I http://127.0.0.1:9876 || true
+curl -I http://localhost:9876
 
 ###############################################################################
 # Bootstrap Complete
